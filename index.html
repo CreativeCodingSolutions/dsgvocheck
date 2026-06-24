@@ -3,8 +3,36 @@
 <head>
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSGVO-Check – Datenschutz-Compliance Prüfung für Unternehmen</title>
     <meta name="description" content="Kostenloser DSGVO-Compliance Check für Unternehmen. Prüfen Sie in 28 Fragen Ihre Datenschutz-Konformität und erhalten Sie einen detaillierten Bericht mit Handlungsempfehlungen.">
-    <title>DSGVO-Check – Datenschutz-Compliance Prüfung</title>
+    <meta name="keywords" content="DSGVO, Datenschutz, Compliance, Check, Unternehmen, Datenschutz-Grundverordnung, Prüfung">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="DSGVO-Check">
+    <link rel="canonical" href="https://creativecodingsolutions.github.io/dsgvocheck/">
+    <meta property="og:title" content="DSGVO-Check – Kostenlose Datenschutz-Compliance Prüfung">
+    <meta property="og:description" content="Prüfen Sie in 28 Fragen Ihre DSGVO-Konformität. Erhalten Sie sofort einen detaillierten Bericht mit Handlungsempfehlungen.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://creativecodingsolutions.github.io/dsgvocheck/">
+    <meta property="og:locale" content="de_DE">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="DSGVO-Check – Datenschutz-Compliance Prüfung">
+    <meta name="twitter:description" content="Kostenloser DSGVO-Compliance Check. 28 Fragen, sofortige Auswertung mit Handlungsempfehlungen.">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DSGVO-Compliance Check",
+      "description": "Kostenloser DSGVO-Compliance Check für Unternehmen. Prüfen Sie in 28 Fragen Ihre Datenschutz-Konformität.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "inLanguage": "de"
+    }
+    </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer data-domain="dsgvocheck.app" src="https://plausible.io/js/script.js"></script>
 <style>
@@ -177,6 +205,10 @@
         <div class="score-label" id="scoreLabel"></div>
         <div class="score-desc" id="scoreDesc"></div>
       </div>
+      <div style="margin:1.5rem 0;">
+        <h3 style="margin-bottom:0.75rem;font-size:1rem;">Übersicht</h3>
+        <div id="summaryChart" style="display:flex;align-items:flex-end;gap:0.25rem;height:120px;padding:0.5rem 0;"></div>
+      </div>
       <div class="category-scores" id="categoryScores"></div>
       <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--gray-200);">
       <h3 style="margin-bottom:0.75rem;font-size:1.1rem;">Handlungsempfehlungen</h3>
@@ -249,6 +281,7 @@ let userEmail = '';
 let savedResults = null;
 
 function init() {
+  if (loadResultsFromHash()) return;
   renderCategories();
   checkStartScreen();
   loadFromStorage();
@@ -474,7 +507,21 @@ function showResults() {
     return `<li class="${cls}"><strong>${r.cat}:</strong> ${r.text}</li>`;
   }).join('');
 
+  renderSummaryChart(catScores);
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderSummaryChart(catScores) {
+  const container = document.getElementById('summaryChart');
+  container.innerHTML = catScores.map(cs => {
+    const barColor = cs.pct >= 70 ? 'var(--green)' : cs.pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    const pct = Math.max(cs.pct, 5);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;">
+      <div style="width:100%;max-width:48px;background:${barColor};border-radius:4px 4px 0 0;height:${pct}%;min-height:8px;transition:height 0.6s ease;" title="${cs.title}: ${cs.pct}%"></div>
+      <span style="font-size:0.55rem;color:var(--gray-400);margin-top:0.25rem;text-align:center;writing-mode:vertical-lr;transform:rotate(180deg);max-height:40px;overflow:hidden;">${cs.title}</span>
+    </div>`;
+  }).join('');
 }
 
 function getRecommendation(catId, pct) {
@@ -637,14 +684,80 @@ function emailResults() {
   window.open(mailto, '_blank');
 }
 
+function buildResultHash() {
+  const { totalPct, catScores, totalGot, totalMax } = computeResults();
+  const data = { t: totalPct, g: totalGot, m: totalMax, c: catScores.map(c => [c.pct, c.got, c.max]) };
+  return '#r=' + btoa(JSON.stringify(data));
+}
+
+function loadResultsFromHash() {
+  const match = location.hash.match(/^#r=(.+)$/);
+  if (!match) return false;
+  try {
+    const data = JSON.parse(atob(match[1]));
+    if (!data || !data.c) return false;
+    const catScores = data.c.map((c, i) => ({ id: categories[i]?.id || '', title: categories[i]?.title || '', pct: c[0], got: c[1], max: c[2] }));
+    const totalPct = data.t;
+    showSharedResults(totalPct, catScores, data.g, data.m);
+    return true;
+  } catch (e) { return false; }
+}
+
+function showSharedResults(totalPct, catScores, totalGot, totalMax) {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('question-screen').style.display = 'none';
+  document.getElementById('email-screen').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+
+  const circle = document.getElementById('scoreCircle');
+  circle.textContent = totalPct + '%';
+  if (totalPct >= 80) { circle.className = 'score-circle excellent'; }
+  else if (totalPct >= 60) { circle.className = 'score-circle good'; }
+  else if (totalPct >= 40) { circle.className = 'score-circle moderate'; }
+  else { circle.className = 'score-circle poor'; }
+
+  const label = document.getElementById('scoreLabel');
+  const desc = document.getElementById('scoreDesc');
+  if (totalPct >= 80) { label.textContent = 'Hervorragend – Ihr Unternehmen ist gut aufgestellt'; desc.textContent = 'Sie erfüllen die meisten DSGVO-Anforderungen. Fokussieren Sie sich auf die wenigen Verbesserungspotenziale.'; }
+  else if (totalPct >= 60) { label.textContent = 'Gut – aber mit Verbesserungspotenzial'; desc.textContent = 'Sie haben eine solide Basis. Mit gezielten Maßnahmen können Sie die Compliance weiter erhöhen.'; }
+  else if (totalPct >= 40) { label.textContent = 'Mäßig – Handlungsbedarf erkennbar'; desc.textContent = 'Es bestehen signifikante Lücken. Wir empfehlen zeitnahe Maßnahmen zur Risikominimierung.'; }
+  else { label.textContent = 'Kritisch – dringender Handlungsbedarf'; desc.textContent = 'Ihr Unternehmen trägt erhebliche Compliance-Risiken. Suchen Sie umgehend datenschutzrechtliche Beratung.'; }
+
+  const container = document.getElementById('categoryScores');
+  container.innerHTML = catScores.map(cs => {
+    const barColor = cs.pct >= 70 ? 'var(--green)' : cs.pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    const tag = cs.pct >= 70 ? 'tag-green' : cs.pct >= 40 ? 'tag-yellow' : 'tag-red';
+    const tagText = cs.pct >= 70 ? 'Gut' : cs.pct >= 40 ? 'Mäßig' : 'Kritisch';
+    return `<div class="category-score">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+        <h4>${cs.title}</h4>
+        <span class="tag ${tag}">${tagText}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+        <span>${cs.got}/${cs.max} Punkte</span>
+        <span><strong>${cs.pct}%</strong></span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${cs.pct}%;background:${barColor};"></div></div>
+    </div>`;
+  }).join('');
+
+  renderSummaryChart(catScores);
+
+  const recs = document.getElementById('recommendations');
+  recs.innerHTML = '';
+  savedResults = { totalPct, totalGot, totalMax, catScores, date: new Date().toISOString() };
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function shareResults() {
   const { totalPct } = computeResults();
-    const text = `🧾 Mein Unternehmen erreicht ${totalPct}% im DSGVO-Compliance Check. Prüfen Sie auch Ihren Datenschutz-Status: https://dsgvocheck.app`;
+  const shareUrl = location.origin + location.pathname + buildResultHash();
+  const text = `Mein Unternehmen erreicht ${totalPct}% im DSGVO-Compliance Check. Prüfen Sie auch Ihren Datenschutz-Status: ${shareUrl}`;
   if (navigator.share) {
     navigator.share({ title: 'DSGVO-Compliance Check', text }).catch(() => {});
   } else {
     navigator.clipboard.writeText(text).then(() => {
-      alert('Ergebnis wurde in die Zwischenablage kopiert!');
+      alert('Ergebnis-Link wurde in die Zwischenablage kopiert!');
     }).catch(() => {
       prompt('Teilen Sie Ihr Ergebnis:', text);
     });

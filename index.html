@@ -155,15 +155,15 @@
   <div id="email-screen">
     <div class="card">
       <div class="email-form">
-        <h3>Fast geschafft! 🎉</h3>
-        <p>Geben Sie Ihre E-Mail-Adresse ein, um Ihren persönlichen DSGVO-Bericht zu erhalten. Wir senden Ihnen den Bericht zu und informieren Sie über aktuelle Datenschutzthemen.</p>
+        <h3>Ihr DSGVO-Bericht ist fertig! 🎉</h3>
+        <p>Ihr persönlicher Bericht wird Ihnen sofort auf dem Bildschirm angezeigt. Optional können Sie Ihre E-Mail-Adresse hinterlassen, um den Bericht später erneut abzurufen oder über Datenschutz-Updates informiert zu werden.</p>
         <div class="email-input-group">
-          <input type="email" id="emailInput" placeholder="ihre@email.de" autocomplete="email">
-          <button class="btn-success" onclick="submitEmail()" style="padding:0.6rem 1.5rem;">Bericht anfordern</button>
+          <input type="email" id="emailInput" placeholder="ihre@email.de (optional)" autocomplete="email">
+          <button class="btn-success" onclick="submitEmail()" style="padding:0.6rem 1.5rem;">Bericht anzeigen</button>
         </div>
         <div id="emailError" style="color:var(--red);font-size:0.8rem;margin-top:0.5rem;display:none;"></div>
-        <div class="email-note">Der Bericht wird Ihnen umgehend per E-Mail zugesandt. Kein Spam, jederzeit abbestellbar.</div>
-        <div class="email-skip" onclick="skipEmail()">Weiter ohne E-Mail</div>
+        <div class="email-note">Keine E-Mail erforderlich – der Bericht wird sofort angezeigt. E-Mail-Adresse wird nur mit Ihrer Zustimmung gespeichert.</div>
+        <div class="email-skip" onclick="skipEmail()">Bericht jetzt anzeigen</div>
       </div>
     </div>
   </div>
@@ -183,6 +183,7 @@
       <ul class="recommendations" id="recommendations"></ul>
       <div class="report-actions">
         <button class="btn-success" onclick="downloadPDF()">📄 PDF Bericht herunterladen</button>
+        <button class="btn-primary" onclick="emailResults()">✉️ Per E-Mail senden</button>
         <button class="btn-primary" onclick="shareResults()">🔗 Ergebnis teilen</button>
         <button class="btn-secondary" onclick="resetQuiz()">Neuen Check durchführen</button>
       </div>
@@ -623,6 +624,17 @@ function downloadPDF() {
   doc.text('Dieser Bericht dient ausschließlich zu Informationszwecken und stellt keine Rechtsberatung dar.', margin, y);
 
   doc.save(`dsgvo-check-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function emailResults() {
+  const { totalPct, catScores } = computeResults();
+  let body = `Mein DSGVO-Compliance Ergebnis: ${totalPct}%\n\n`;
+  catScores.forEach(cs => {
+    body += `${cs.title}: ${cs.pct}% (${cs.got}/${cs.max})\n`;
+  });
+  body += `\nErstellt mit: https://dsgvocheck.app\n\n---\nDieser Bericht dient ausschließlich zu Informationszwecken und stellt keine Rechtsberatung dar.`;
+  const mailto = `mailto:?subject=DSGVO-Compliance Bericht (${totalPct}%)&body=${encodeURIComponent(body)}`;
+  window.open(mailto, '_blank');
 }
 
 function shareResults() {

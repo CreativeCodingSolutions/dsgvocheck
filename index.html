@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSGVO-Check – Datenschutz-Compliance Prüfung</title>
+<style>
+  :root {
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-900); line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 0 1rem; }
+  header { background: linear-gradient(135deg, #1e3a5f, #2563eb); color: white; padding: 2rem 0; text-align: center; }
+  header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+  header p { opacity: 0.9; font-size: 1rem; }
+  .progress-bar { height: 4px; background: var(--gray-200); position: sticky; top: 0; z-index: 10; }
+  .progress-fill { height: 100%; background: var(--blue); transition: width 0.3s; width: 0%; }
+  .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin: 1rem 0; }
+  .card h2 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--gray-900); }
+  .card p { color: var(--gray-500); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .question { margin-bottom: 1.25rem; }
+  .question label { display: block; font-weight: 500; margin-bottom: 0.4rem; font-size: 0.95rem; }
+  .question .desc { color: var(--gray-500); font-size: 0.8rem; margin-bottom: 0.5rem; }
+  .options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .options button { padding: 0.5rem 1rem; border: 2px solid var(--gray-200); border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+  .options button:hover { border-color: var(--blue); }
+  .options button.selected { border-color: var(--blue); background: #eff6ff; color: var(--blue); font-weight: 600; }
+  .options button.score-0.selected { border-color: var(--red); background: #fef2f2; color: var(--red); }
+  .options button.score-1.selected { border-color: var(--yellow); background: #fefce8; color: #a16207; }
+  .options button.score-2.selected { border-color: var(--green); background: #f0fdf4; color: #15803d; }
+  .nav-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; }
+  .nav-buttons button { padding: 0.6rem 1.5rem; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: var(--gray-100); color: var(--gray-700); }
+  .btn-secondary:hover { background: var(--gray-200); }
+  .btn-success { background: var(--green); color: white; }
+  .btn-success:hover { background: #16a34a; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #result { display: none; }
+  .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 1rem auto; font-size: 2rem; font-weight: 700; color: white; }
+  .score-circle.excellent { background: var(--green); }
+  .score-circle.good { background: var(--blue); }
+  .score-circle.moderate { background: var(--yellow); }
+  .score-circle.poor { background: var(--red); }
+  .category-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; }
+  .category-score { padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+  .category-score h4 { font-size: 0.8rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .category-score .bar { height: 6px; background: var(--gray-200); border-radius: 3px; margin-top: 0.4rem; }
+  .category-score .bar-fill { height: 100%; border-radius: 3px; }
+  .recommendations { list-style: none; }
+  .recommendations li { padding: 0.75rem; border-left: 3px solid var(--red); margin-bottom: 0.5rem; background: var(--gray-50); border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+  .recommendations li.low { border-color: var(--yellow); }
+  .recommendations li.ok { border-color: var(--green); }
+  #start-screen { text-align: center; padding: 3rem 1rem; }
+  #start-screen h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+  #start-screen p { color: var(--gray-500); max-width: 500px; margin: 0 auto 2rem; }
+  #start-screen .categories-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 500px; margin: 0 auto 2rem; text-align: left; }
+  #start-screen .categories-list div { padding: 0.5rem 0.75rem; background: var(--gray-50); border-radius: 6px; font-size: 0.9rem; }
+  #question-screen { display: none; }
+  footer { text-align: center; padding: 2rem; color: var(--gray-500); font-size: 0.8rem; }
+  .report-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    .category-scores { grid-template-columns: 1fr; }
+    #start-screen .categories-list { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>DSGVO-Compliance Check</h1>
+    <p>Prüfen Sie den Datenschutz-Status Ihres Unternehmens</p>
+  </div>
+</header>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="container">
+  <!-- Start Screen -->
+  <div id="start-screen">
+    <div class="card">
+      <h2>Bewerten Sie Ihre DSGVO-Konformität</h2>
+      <p>Beantworten Sie 28 Fragen in 8 Kategorien. Erhalten Sie sofort eine detaillierte Auswertung mit Handlungsempfehlungen.</p>
+      <div class="categories-list" id="categoriesList"></div>
+      <button class="btn-primary" onclick="startQuiz()" style="padding:0.75rem 2rem;font-size:1rem;">Jetzt starten</button>
+    </div>
+  </div>
+
+  <!-- Question Screen -->
+  <div id="question-screen">
+    <div class="card">
+      <h2 id="categoryTitle"></h2>
+      <p id="categoryDesc"></p>
+      <div id="questions"></div>
+      <div class="nav-buttons">
+        <button class="btn-secondary" id="prevBtn" onclick="prevQuestion()">Zurück</button>
+        <span id="questionCounter" style="font-size:0.85rem;color:var(--gray-500);align-self:center;"></span>
+        <button class="btn-primary" id="nextBtn" onclick="nextQuestion()">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="result">
+    <div class="card">
+      <h2 style="text-align:center;">Ihr DSGVO-Compliance Ergebnis</h2>
+      <div class="score-circle" id="scoreCircle">0%</div>
+      <p id="scoreLabel" style="text-align:center;font-weight:600;font-size:1.1rem;"></p>
+      <p id="scoreDesc" style="text-align:center;color:var(--gray-500);font-size:0.9rem;margin-top:0.5rem;"></p>
+      <div class="category-scores" id="categoryScores"></div>
+      <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--gray-200);">
+      <h3 style="margin-bottom:0.75rem;">Handlungsempfehlungen</h3>
+      <ul class="recommendations" id="recommendations"></ul>
+      <div class="report-actions">
+        <button class="btn-primary" onclick="downloadPDF()">PDF Bericht herunterladen</button>
+        <button class="btn-secondary" onclick="resetQuiz()">Neuen Check durchführen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    DSGVO-Check – Datenschutz-Compliance Prüfung | Keine Rechtsberatung
+  </div>
+</footer>
+
+<script>
+const categories = [
+  { id: 'processing', title: 'Datenverarbeitung', desc: 'Rechtsgrundlage, Zweckbindung und Datenminimierung Ihrer Verarbeitungstätigkeiten.' },
+  { id: 'consent', title: 'Einwilligungsmanagement', desc: 'Einholung, Nachweis und Verwaltung von Einwilligungen.' },
+  { id: 'rights', title: 'Betroffenenrechte', desc: 'Auskunft, Löschung, Berichtigung und Datenübertragbarkeit.' },
+  { id: 'security', title: 'Datensicherheit', desc: 'Technische und organisatorische Maßnahmen (TOM).' },
+  { id: 'breach', title: 'Datenschutzverletzungen', desc: 'Meldepflichten und Dokumentation von Verletzungen.' },
+  { id: 'dpo', title: 'Datenschutzbeauftragter', desc: 'Bestellung, Stellung und Aufgaben des DSB.' },
+  { id: 'docs', title: 'Dokumentation', desc: 'Verarbeitungsverzeichnis, Auftragsverarbeitung und DPA.' },
+  { id: 'transfer', title: 'Drittlandtransfer', desc: 'Übermittlung in Drittländer und geeignete Garantien.' }
+];
+
+const questions = [
+  // Datenverarbeitung
+  { cat: 0, q: 'Haben Sie für jede Verarbeitungstätigkeit eine Rechtsgrundlage gemäß Art. 6 DSGVO dokumentiert?', opt: ['Nein, nicht dokumentiert', 'Teilweise dokumentiert', 'Ja, vollständig dokumentiert'] },
+  { cat: 0, q: 'Werden die Zwecke der Datenverarbeitung vor Erhebung bestimmt und dokumentiert?', opt: ['Nein', 'Teilweise', 'Ja, immer'] },
+  { cat: 0, q: 'Erheben Sie nur Daten, die für den Zweck erforderlich sind (Datenminimierung)?', opt: ['Nein, wir erheben mehr als nötig', 'Größtenteils', 'Ja, streng nach Datenminimierung'] },
+  { cat: 0, q: 'Haben Sie eine Datenschutz-Folgenabschätzung (DPIA) für risikoreiche Verarbeitungen durchgeführt?', opt: ['Nie durchgeführt', 'Teilweise', 'Ja, für alle risikoreichen Verarbeitungen'] },
+  // Einwilligungsmanagement
+  { cat: 1, q: 'Holen Sie aktive Einwilligungen vor der Verarbeitung personenbezogener Daten ein?', opt: ['Nein, keine Einwilligungen', 'Teilweise / nur wo rechtlich erforderlich', 'Ja, immer aktiv und dokumentiert'] },
+  { cat: 1, q: 'Können Nutzer Einwilligungen genauso einfach widerrufen wie erteilen?', opt: ['Nein', 'Nicht gleich einfach', 'Ja, jederzeit und gleich einfach'] },
+  { cat: 1, q: 'Dokumentieren Sie alle Einwilligungen nachweislich (Zeitstempel, Inhalt)?', opt: ['Nein, keine Dokumentation', 'Teilweise dokumentiert', 'Ja, vollständig nachweislich'] },
+  // Betroffenenrechte
+  { cat: 2, q: 'Haben Sie einen Prozess zur Bearbeitung von Auskunftsanfragen (Art. 15 DSGVO)?', opt: ['Nein', 'Informell vorhanden', 'Ja, formaler Prozess'] },
+  { cat: 2, q: 'Können Sie Daten auf Anfrage innerhalb der 30-Tage-Frist vollständig löschen?', opt: ['Nein', 'Teilweise möglich', 'Ja, innerhalb der Frist'] },
+  { cat: 2, q: 'Ermöglichen Sie die Datenübertragbarkeit (Art. 20 DSGVO) in einem maschinenlesbaren Format?', opt: ['Nein', 'Auf Anfrage manuell', 'Ja, automatisiert'] },
+  { cat: 2, q: 'Haben Sie ein Verfahren zur Berichtigung unrichtiger Daten etabliert?', opt: ['Nein', 'Informell', 'Ja, formaler Prozess'] },
+  // Datensicherheit
+  { cat: 3, q: 'Verschlüsseln Sie personenbezogene Daten bei der Übertragung (TLS/SSL)?', opt: ['Nein', 'Teilweise', 'Ja, durchgehend'] },
+  { cat: 3, q: 'Verschlüsseln Sie personenbezogene Daten im Ruhezustand (Festplatten-/Datenbankverschlüsselung)?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
+  { cat: 3, q: 'Haben Sie ein Zugriffskontrollsystem (wer darf auf welche Daten zugreifen)?', opt: ['Nein', 'Teilweise / Ad-hoc', 'Ja, rollenbasiert (RBAC)'] },
+  { cat: 3, q: 'Führen Sie regelmäßige Sicherheitsschulungen für Mitarbeiter durch?', opt: ['Nie', 'Einmalig / unregelmäßig', 'Ja, regelmäßig (mind. jährlich)'] },
+  { cat: 3, q: 'Haben Sie ein Verfahren zur regelmäßigen Überprüfung der Sicherheitsmaßnahmen?', opt: ['Nein', 'Ad-hoc', 'Ja, regelmäßige Audits'] },
+  // Datenschutzverletzungen
+  { cat: 4, q: 'Haben Sie einen Incident-Response-Plan für Datenschutzverletzungen?', opt: ['Nein', 'Informeller Plan', 'Ja, dokumentierter Prozess'] },
+  { cat: 4, q: 'Können Sie eine Datenverletzung innerhalb von 72 Stunden an die Aufsichtsbehörde melden?', opt: ['Nein', 'Wahrscheinlich', 'Ja, Prozess etabliert'] },
+  { cat: 4, q: 'Dokumentieren Sie alle Datenschutzverletzungen (auch nicht meldepflichtige)?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
+  // Datenschutzbeauftragter
+  { cat: 5, q: 'Haben Sie einen Datenschutzbeauftragten bestellt (falls erforderlich)?', opt: ['Nicht bestellt / nicht erforderlich', 'Extern bestellt', 'Intern bestellt und etabliert'] },
+  { cat: 5, q: 'Ist der Datenschutzbeauftragte in alle Datenschutzfragen eingebunden?', opt: ['Nein', 'Teilweise', 'Ja, in alle Prozesse'] },
+  { cat: 5, q: 'Wird der Datenschutzbeauftragte regelmäßig geschult und weitergebildet?', opt: ['Nein', 'Unregelmäßig', 'Ja, regelmäßig'] },
+  // Dokumentation
+  { cat: 6, q: 'Führen Sie ein vollständiges Verzeichnis aller Verarbeitungstätigkeiten (Art. 30 DSGVO)?', opt: ['Nein', 'Unvollständig', 'Ja, vollständig und aktuell'] },
+  { cat: 6, q: 'Haben Sie mit allen Auftragsverarbeitern eine schriftliche DPA (AV-Vertrag) abgeschlossen?', opt: ['Nein / nicht alle', 'Teilweise', 'Ja, mit allen'] },
+  { cat: 6, q: 'Dokumentieren Sie die Weisungsgebundenheit Ihrer Auftragsverarbeiter?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
+  // Drittlandtransfer
+  { cat: 7, q: 'Übermitteln Sie personenbezogene Daten in Drittländer (außerhalb EU/EWR)?', opt: ['Ja, ohne geeignete Garantien', 'Ja, mit Standardvertragsklauseln (SCC)', 'Nein / Ja, mit Angemessenheitsbeschluss'] },
+  { cat: 7, q: 'Haben Sie die Übermittlungen in Drittländer dokumentiert und die Garantien geprüft?', opt: ['Nicht dokumentiert', 'Teilweise dokumentiert', 'Ja, vollständig dokumentiert und geprüft'] },
+  { cat: 7, q: 'Informieren Sie betroffene Personen über beabsichtigte Drittlandtransfers?', opt: ['Nein', 'Teilweise', 'Ja, transparent'] }
+];
+
+let currentQuestion = 0;
+let answers = {};
+
+function init() {
+  renderCategories();
+  checkStartScreen();
+}
+
+function renderCategories() {
+  const list = document.getElementById('categoriesList');
+  list.innerHTML = categories.map(c => `<div>✓ ${c.title}</div>`).join('');
+}
+
+function checkStartScreen() {
+  const hasAnswers = Object.keys(answers).length > 0;
+  if (hasAnswers) {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('question-screen').style.display = 'block';
+    renderQuestion(currentQuestion);
+  }
+}
+
+function startQuiz() {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('question-screen').style.display = 'block';
+  currentQuestion = 0;
+  answers = {};
+  renderQuestion(0);
+}
+
+function renderQuestion(idx) {
+  const q = questions[idx];
+  const cat = categories[q.cat];
+  document.getElementById('categoryTitle').textContent = cat.title;
+  document.getElementById('categoryDesc').textContent = cat.desc;
+  document.getElementById('questionCounter').textContent = `Frage ${idx + 1} / ${questions.length}`;
+
+  const container = document.getElementById('questions');
+  container.innerHTML = '';
+
+  const div = document.createElement('div');
+  div.className = 'question';
+  const label = document.createElement('label');
+  label.textContent = q.q;
+  div.appendChild(label);
+  const opts = document.createElement('div');
+  opts.className = 'options';
+  q.opt.forEach((opt, oi) => {
+    const btn = document.createElement('button');
+    btn.textContent = opt;
+    btn.className = `score-${oi}`;
+    if (answers[idx] === oi) btn.classList.add('selected');
+    btn.onclick = () => selectOption(idx, oi);
+    opts.appendChild(btn);
+  });
+  div.appendChild(opts);
+  container.appendChild(div);
+
+  document.getElementById('prevBtn').disabled = idx === 0;
+  const nextBtn = document.getElementById('nextBtn');
+  const isLast = idx === questions.length - 1;
+  nextBtn.textContent = isLast ? 'Ergebnis anzeigen' : 'Weiter';
+  nextBtn.className = answers[idx] !== undefined ? (isLast ? 'btn-success' : 'btn-primary') : 'btn-primary';
+  nextBtn.disabled = answers[idx] === undefined;
+
+  updateProgress();
+}
+
+function selectOption(idx, optIdx) {
+  answers[idx] = optIdx;
+  const buttons = document.querySelectorAll('.options button');
+  buttons.forEach((b, i) => {
+    b.classList.toggle('selected', i === optIdx);
+  });
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.disabled = false;
+  const isLast = idx === questions.length - 1;
+  if (isLast) nextBtn.className = 'btn-success';
+}
+
+function nextQuestion() {
+  if (currentQuestion === questions.length - 1) {
+    showResults();
+    return;
+  }
+  currentQuestion++;
+  renderQuestion(currentQuestion);
+}
+
+function prevQuestion() {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    renderQuestion(currentQuestion);
+  }
+}
+
+function updateProgress() {
+  const pct = (Object.keys(answers).length / questions.length) * 100;
+  document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
+}
+
+function showResults() {
+  document.getElementById('question-screen').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+
+  const catScores = categories.map((cat, ci) => {
+    const catQs = questions.filter(q => q.cat === ci);
+    const catAnswers = catQs.map((q, qi) => {
+      const globalIdx = questions.indexOf(q);
+      return answers[globalIdx] !== undefined ? answers[globalIdx] : 0;
+    });
+    const max = catQs.length * 2;
+    const got = catAnswers.reduce((s, a) => s + a, 0);
+    const pct = max > 0 ? Math.round((got / max) * 100) : 0;
+    const missing = catQs.filter((q, qi) => answers[questions.indexOf(q)] === undefined);
+    return { id: cat.id, title: cat.title, pct, got, max, missing: missing.length };
+  });
+
+  const totalMax = questions.length * 2;
+  const totalGot = Object.values(answers).reduce((s, a) => s + a, 0);
+  const totalPct = Math.round((totalGot / totalMax) * 100);
+
+  const circle = document.getElementById('scoreCircle');
+  circle.textContent = totalPct + '%';
+  if (totalPct >= 80) { circle.className = 'score-circle excellent'; }
+  else if (totalPct >= 60) { circle.className = 'score-circle good'; }
+  else if (totalPct >= 40) { circle.className = 'score-circle moderate'; }
+  else { circle.className = 'score-circle poor'; }
+
+  const label = document.getElementById('scoreLabel');
+  const desc = document.getElementById('scoreDesc');
+  if (totalPct >= 80) { label.textContent = 'Hervorragend – Ihr Unternehmen ist gut aufgestellt'; desc.textContent = 'Sie erfüllen die meisten DSGVO-Anforderungen. Fokussieren Sie sich auf die wenigen Verbesserungspotenziale.'; }
+  else if (totalPct >= 60) { label.textContent = 'Gut – aber mit Verbesserungspotenzial'; desc.textContent = 'Sie haben eine solide Basis. Mit gezielten Maßnahmen können Sie die Compliance weiter erhöhen.'; }
+  else if (totalPct >= 40) { label.textContent = 'Mäßig – Handlungsbedarf erkennbar'; desc.textContent = 'Es bestehen signifikante Lücken. Wir empfehlen zeitnahe Maßnahmen zur Risikominimierung.'; }
+  else { label.textContent = 'Kritisch – dringender Handlungsbedarf'; desc.textContent = 'Ihr Unternehmen trägt erhebliche Compliance-Risiken. Suchen Sie umgehend datenschutzrechtliche Beratung.'; }
+
+  const container = document.getElementById('categoryScores');
+  container.innerHTML = catScores.map(cs => {
+    const barColor = cs.pct >= 70 ? 'var(--green)' : cs.pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    return `<div class="category-score">
+      <h4>${cs.title}</h4>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+        <span>${cs.got}/${cs.max} Punkte</span>
+        <span><strong>${cs.pct}%</strong></span>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${cs.pct}%;background:${barColor};"></div></div>
+    </div>`;
+  }).join('');
+
+  const recs = document.getElementById('recommendations');
+  const allRecs = [];
+  catScores.forEach(cs => {
+    if (cs.pct < 100) {
+      allRecs.push({ cat: cs.title, pct: cs.pct, text: getRecommendation(cs.id, cs.pct) });
+    }
+  });
+  recs.innerHTML = allRecs.map(r => {
+    const cls = r.pct >= 60 ? 'ok' : r.pct >= 30 ? 'low' : '';
+    return `<li class="${cls}"><strong>${r.cat}:</strong> ${r.text}</li>`;
+  }).join('');
+}
+
+function getRecommendation(catId, pct) {
+  const recs = {
+    processing: pct < 30 ? 'Dokumentieren Sie umgehend alle Verarbeitungstätigkeiten mit Rechtsgrundlage. Führen Sie eine DPIA für risikoreiche Prozesse durch.' :
+      pct < 60 ? 'Vervollständigen Sie die Dokumentation der Verarbeitungstätigkeiten und prüfen Sie die Durchführung von DPIAs.' :
+      'Optimieren Sie Ihre Prozesse zur Datenminimierung und führen Sie regelmäßige Überprüfungen durch.',
+    consent: pct < 30 ? 'Implementieren Sie ein Consent-Management-System mit aktiver Einwilligung und Widerrufsmöglichkeit.' :
+      pct < 60 ? 'Stellen Sie sicher, dass Einwilligungen vollständig nachweislich dokumentiert werden (Zeitstempel, Inhalt, Herkunft).' :
+      'Überprüfen Sie regelmäßig Ihre Einwilligungsprozesse auf Aktualität und Vollständigkeit.',
+    rights: pct < 30 ? 'Etablieren Sie formale Prozesse für Auskunft, Löschung, Berichtigung und Datenübertragbarkeit.' :
+      pct < 60 ? 'Automatisieren Sie Ihre Prozesse zur Bearbeitung von Betroffenenanfragen, um Fristen einzuhalten.' :
+      'Optimieren Sie die Prozesse und stellen Sie sicher, dass alle Mitarbeiter geschult sind.',
+    security: pct < 30 ? 'Implementieren Sie umgehend Verschlüsselung (TLS/SSL), Zugriffskontrollen und ein Sicherheitsaudit-Verfahren.' :
+      pct < 60 ? 'Schließen Sie die Lücken in Ihren Sicherheitsmaßnahmen und führen Sie regelmäßige Mitarbeiterschulungen durch.' :
+      'Führen Sie regelmäßige Penetrationstests und Sicherheitsaudits durch, um Ihre Maßnahmen zu validieren.',
+    breach: pct < 30 ? 'Entwickeln Sie einen Incident-Response-Plan und etablieren Sie einen Prozess zur 72-Stunden-Meldung.' :
+      pct < 60 ? 'Testen Sie Ihren Incident-Response-Prozess regelmäßig durch Simulationen und dokumentieren Sie alle Vorfälle.' :
+      'Optimieren Sie Ihre Erkennungs- und Meldewege, um die Reaktionszeit weiter zu verkürzen.',
+    dpo: pct < 30 ? 'Prüfen Sie die Pflicht zur Bestellung eines Datenschutzbeauftragten und handeln Sie entsprechend.' :
+      pct < 60 ? 'Stellen Sie sicher, dass der DSB in alle Datenschutzfragen frühzeitig eingebunden wird.' :
+      'Etablieren Sie regelmäßige Schulungen und Berichtsstrukturen für den Datenschutzbeauftragten.',
+    docs: pct < 30 ? 'Erstellen Sie ein vollständiges Verzeichnis der Verarbeitungstätigkeiten und schließen Sie mit allen Auftragsverarbeitern DPAs ab.' :
+      pct < 60 ? 'Vervollständigen Sie die fehlenden DPAs und aktualisieren Sie das Verarbeitungsverzeichnis.' :
+      'Führen Sie regelmäßige Audits Ihrer Auftragsverarbeiter durch und aktualisieren Sie die Dokumentation.',
+    transfer: pct < 30 ? 'Identifizieren Sie alle Drittlandtransfers und implementieren Sie geeignete Garantien (z.B. SCC).' :
+      pct < 60 ? 'Dokumentieren Sie alle Drittlandtransfers vollständig und informieren Sie betroffene Personen.' :
+      'Überprüfen Sie regelmäßig die Angemessenheit Ihrer Garantien und passen Sie diese an aktuelle Rechtsentwicklungen an.'
+  };
+  return recs[catId] || 'Überprüfen und optimieren Sie Ihre Maßnahmen in diesem Bereich.';
+}
+
+function downloadPDF() {
+  const total = Object.keys(answers).length;
+  const totalMax = questions.length * 2;
+  const totalGot = Object.values(answers).reduce((s, a) => s + a, 0);
+  const pct = Math.round((totalGot / totalMax) * 100);
+
+  const content = [
+    'DSGVO-COMPLIANCE CHECK – ERGEBNISBERICHT',
+    '============================================',
+    `Datum: ${new Date().toLocaleDateString('de-DE')}`,
+    '',
+    `Gesamtergebnis: ${pct}%`,
+    `Beantwortete Fragen: ${total} / ${questions.length}`,
+    '',
+    '--- KATEGORIEN ---',
+    ...categories.map((cat, ci) => {
+      const catQs = questions.filter(q => q.cat === ci);
+      const catAns = catQs.map(q => answers[questions.indexOf(q)] || 0);
+      const max = catQs.length * 2;
+      const got = catAns.reduce((s, a) => s + a, 0);
+      return `  ${cat.title}: ${got}/${max} (${Math.round((got/max)*100)}%)`;
+    }),
+    '',
+    '--- HANDLUNGSEMPFEHLUNGEN ---',
+    ...categories.map((cat, ci) => {
+      const catQs = questions.filter(q => q.cat === ci);
+      const catAns = catQs.map(q => answers[questions.indexOf(q)] || 0);
+      const max = catQs.length * 2;
+      const got = catAns.reduce((s, a) => s + a, 0);
+      const p = Math.round((got/max)*100);
+      return `  ${cat.title} (${p}%): ${getRecommendation(cat.id, p)}`;
+    }),
+    '',
+    '--- RECHTLICHER HINWEIS ---',
+    'Dieser Bericht dient ausschließlich zu Informationszwecken und stellt keine Rechtsberatung dar. Für eine verbindliche Bewertung konsultieren Sie bitte einen Datenschutzbeauftragten oder Rechtsanwalt.'
+  ].join('\n');
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dsgvo-check-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetQuiz() {
+  currentQuestion = 0;
+  answers = {};
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'block';
+  document.getElementById('progressFill').style.width = '0%';
+}
+
+init();
+</script>
+</body>
+</html>

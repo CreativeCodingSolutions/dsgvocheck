@@ -1,0 +1,16 @@
+{
+  "model": "deepseek-v4-flash-free",
+  "provider": "opencode",
+  "budget": 50,
+  "status": "idle",
+  "idea": "dsgvo checker for companies",
+  "agents": [
+    "ceo-bezos",
+    "critic-munger",
+    "fullstack-dhh",
+    "product-norman",
+    "ui-duarte",
+    "qa-bach",
+    "devops-hightower"
+  ]
+}

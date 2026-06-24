@@ -2,9 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DSGVO-Check – Datenschutz-Compliance Prüfung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kostenloser DSGVO-Compliance Check für Unternehmen. Prüfen Sie in 28 Fragen Ihre Datenschutz-Konformität und erhalten Sie einen detaillierten Bericht mit Handlungsempfehlungen.">
+    <title>DSGVO-Check – Datenschutz-Compliance Prüfung</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer data-domain="dsgvocheck.app" src="https://plausible.io/js/script.js"></script>
 <style>
   :root {
     --green: #22c55e;
@@ -188,11 +190,14 @@
   </div>
 </div>
 
-<footer>
-  <div class="container">
-    DSGVO-Check – Datenschutz-Compliance Prüfung | Keine Rechtsberatung
-  </div>
-</footer>
+  <footer>
+    <div class="container">
+      DSGVO-Check – Datenschutz-Compliance Prüfung | Keine Rechtsberatung<br>
+      <a href="impressum.html" style="color:var(--gray-400);text-decoration:none;font-size:0.75rem;">Impressum</a>
+      <span style="color:var(--gray-300);font-size:0.75rem;">&nbsp;|&nbsp;</span>
+      <a href="datenschutz.html" style="color:var(--gray-400);text-decoration:none;font-size:0.75rem;">Datenschutzerklärung</a>
+    </div>
+  </footer>
 
 <script>
 const categories = [
@@ -622,7 +627,7 @@ function downloadPDF() {
 
 function shareResults() {
   const { totalPct } = computeResults();
-  const text = `🧾 Mein Unternehmen erreicht ${totalPct}% im DSGVO-Compliance Check. Prüfen Sie auch Ihren Datenschutz-Status: https://creativecodingsolutions.github.io/dsgvocheck/`;
+    const text = `🧾 Mein Unternehmen erreicht ${totalPct}% im DSGVO-Compliance Check. Prüfen Sie auch Ihren Datenschutz-Status: https://dsgvocheck.app`;
   if (navigator.share) {
     navigator.share({ title: 'DSGVO-Compliance Check', text }).catch(() => {});
   } else {

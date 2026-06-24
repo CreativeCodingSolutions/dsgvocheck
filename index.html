@@ -4,16 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DSGVO-Check – Datenschutz-Compliance Prüfung</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --green: #22c55e;
+    --green-bg: #f0fdf4;
     --yellow: #eab308;
+    --yellow-bg: #fefce8;
     --red: #ef4444;
+    --red-bg: #fef2f2;
     --blue: #3b82f6;
+    --blue-bg: #eff6ff;
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
     --gray-200: #e5e7eb;
     --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
     --gray-500: #6b7280;
     --gray-700: #374151;
     --gray-900: #111827;
@@ -21,60 +27,87 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-900); line-height: 1.6; }
   .container { max-width: 800px; margin: 0 auto; padding: 0 1rem; }
-  header { background: linear-gradient(135deg, #1e3a5f, #2563eb); color: white; padding: 2rem 0; text-align: center; }
+  header { background: linear-gradient(135deg, #1e3a5f, #2563eb); color: white; padding: 2rem 0; text-align: center; position: relative; overflow: hidden; }
+  header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 50%); }
+  header .container { position: relative; }
   header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
   header p { opacity: 0.9; font-size: 1rem; }
   .progress-bar { height: 4px; background: var(--gray-200); position: sticky; top: 0; z-index: 10; }
-  .progress-fill { height: 100%; background: var(--blue); transition: width 0.3s; width: 0%; }
-  .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin: 1rem 0; }
+  .progress-fill { height: 100%; background: var(--blue); transition: width 0.4s ease; width: 0%; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); padding: 1.5rem; margin: 1rem 0; transition: box-shadow 0.2s; }
+  .card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06); }
   .card h2 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--gray-900); }
   .card p { color: var(--gray-500); margin-bottom: 1.5rem; font-size: 0.9rem; }
-  .question { margin-bottom: 1.25rem; }
+  .question { margin-bottom: 1.25rem; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .question label { display: block; font-weight: 500; margin-bottom: 0.4rem; font-size: 0.95rem; }
   .question .desc { color: var(--gray-500); font-size: 0.8rem; margin-bottom: 0.5rem; }
   .options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-  .options button { padding: 0.5rem 1rem; border: 2px solid var(--gray-200); border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
-  .options button:hover { border-color: var(--blue); }
-  .options button.selected { border-color: var(--blue); background: #eff6ff; color: var(--blue); font-weight: 600; }
-  .options button.score-0.selected { border-color: var(--red); background: #fef2f2; color: var(--red); }
-  .options button.score-1.selected { border-color: var(--yellow); background: #fefce8; color: #a16207; }
-  .options button.score-2.selected { border-color: var(--green); background: #f0fdf4; color: #15803d; }
-  .nav-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; }
-  .nav-buttons button { padding: 0.6rem 1.5rem; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
+  .options button { padding: 0.6rem 1.2rem; border: 2px solid var(--gray-200); border-radius: 8px; background: white; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; flex: 1; min-width: 120px; text-align: center; }
+  .options button:hover { border-color: var(--blue); background: var(--blue-bg); transform: translateY(-1px); }
+  .options button.selected { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+  .options button.score-0.selected { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+  .options button.score-1.selected { border-color: var(--yellow); background: var(--yellow-bg); color: #a16207; }
+  .options button.score-2.selected { border-color: var(--green); background: var(--green-bg); color: #15803d; }
+  .nav-buttons { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }
+  .nav-buttons button { padding: 0.6rem 1.5rem; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: all 0.15s; }
   .btn-primary { background: var(--blue); color: white; }
-  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
   .btn-secondary { background: var(--gray-100); color: var(--gray-700); }
   .btn-secondary:hover { background: var(--gray-200); }
   .btn-success { background: var(--green); color: white; }
-  .btn-success:hover { background: #16a34a; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-success:hover { background: #16a34a; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
   #result { display: none; }
-  .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 1rem auto; font-size: 2rem; font-weight: 700; color: white; }
-  .score-circle.excellent { background: var(--green); }
-  .score-circle.good { background: var(--blue); }
-  .score-circle.moderate { background: var(--yellow); }
-  .score-circle.poor { background: var(--red); }
+  #email-screen { display: none; }
+  .score-circle { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 1rem auto; font-size: 2rem; font-weight: 700; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+  .score-circle.excellent { background: linear-gradient(135deg, var(--green), #16a34a); }
+  .score-circle.good { background: linear-gradient(135deg, var(--blue), #2563eb); }
+  .score-circle.moderate { background: linear-gradient(135deg, var(--yellow), #ca8a04); }
+  .score-circle.poor { background: linear-gradient(135deg, var(--red), #dc2626); }
   .category-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; }
-  .category-score { padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; }
-  .category-score h4 { font-size: 0.8rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .category-score .bar { height: 6px; background: var(--gray-200); border-radius: 3px; margin-top: 0.4rem; }
-  .category-score .bar-fill { height: 100%; border-radius: 3px; }
+  .category-score { padding: 0.75rem; border-radius: 8px; background: var(--gray-50); font-size: 0.85rem; transition: transform 0.15s; }
+  .category-score:hover { transform: translateY(-1px); }
+  .category-score h4 { font-size: 0.8rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+  .category-score .bar { height: 6px; background: var(--gray-200); border-radius: 3px; margin-top: 0.4rem; overflow: hidden; }
+  .category-score .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
   .recommendations { list-style: none; }
-  .recommendations li { padding: 0.75rem; border-left: 3px solid var(--red); margin-bottom: 0.5rem; background: var(--gray-50); border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+  .recommendations li { padding: 0.75rem 1rem; border-left: 3px solid var(--red); margin-bottom: 0.5rem; background: var(--gray-50); border-radius: 0 8px 8px 0; font-size: 0.9rem; transition: background 0.15s; }
+  .recommendations li:hover { background: var(--gray-100); }
   .recommendations li.low { border-color: var(--yellow); }
   .recommendations li.ok { border-color: var(--green); }
   #start-screen { text-align: center; padding: 3rem 1rem; }
   #start-screen h2 { font-size: 1.5rem; margin-bottom: 1rem; }
-  #start-screen p { color: var(--gray-500); max-width: 500px; margin: 0 auto 2rem; }
-  #start-screen .categories-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 500px; margin: 0 auto 2rem; text-align: left; }
-  #start-screen .categories-list div { padding: 0.5rem 0.75rem; background: var(--gray-50); border-radius: 6px; font-size: 0.9rem; }
+  #start-screen .subtitle { color: var(--gray-500); max-width: 500px; margin: 0 auto 2rem; font-size: 0.95rem; }
+  #start-screen .categories-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; max-width: 500px; margin: 0 auto 2rem; text-align: left; }
+  #start-screen .categories-list div { padding: 0.5rem 0.75rem; background: var(--gray-50); border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; }
+  .email-form { max-width: 400px; margin: 2rem auto; text-align: center; }
+  .email-form h3 { margin-bottom: 0.5rem; }
+  .email-form p { color: var(--gray-500); font-size: 0.85rem; margin-bottom: 1rem; }
+  .email-input-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+  .email-input-group input { padding: 0.6rem 1rem; border: 2px solid var(--gray-200); border-radius: 8px; font-size: 0.9rem; flex: 1; min-width: 200px; outline: none; transition: border-color 0.15s; }
+  .email-input-group input:focus { border-color: var(--blue); }
+  .email-input-group input.error { border-color: var(--red); background: var(--red-bg); }
+  .email-note { font-size: 0.75rem; color: var(--gray-400); margin-top: 0.5rem; }
+  .email-skip { color: var(--blue); cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
+  .email-skip:hover { text-decoration: underline; }
   #question-screen { display: none; }
   footer { text-align: center; padding: 2rem; color: var(--gray-500); font-size: 0.8rem; }
   .report-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+  .report-actions button { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .tag-green { background: var(--green-bg); color: #15803d; }
+  .tag-yellow { background: var(--yellow-bg); color: #a16207; }
+  .tag-red { background: var(--red-bg); color: #dc2626; }
+  .score-summary { text-align: center; margin: 1.5rem 0; }
+  .score-summary .score-label { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; }
+  .score-summary .score-desc { color: var(--gray-500); font-size: 0.9rem; margin-top: 0.5rem; max-width: 450px; margin-left: auto; margin-right: auto; }
   @media (max-width: 640px) {
     .category-scores { grid-template-columns: 1fr; }
     #start-screen .categories-list { grid-template-columns: 1fr; }
     header h1 { font-size: 1.3rem; }
+    .options { flex-direction: column; }
+    .options button { min-width: 100%; }
   }
 </style>
 </head>
@@ -94,22 +127,41 @@
   <div id="start-screen">
     <div class="card">
       <h2>Bewerten Sie Ihre DSGVO-Konformität</h2>
-      <p>Beantworten Sie 28 Fragen in 8 Kategorien. Erhalten Sie sofort eine detaillierte Auswertung mit Handlungsempfehlungen.</p>
+      <p class="subtitle">Beantworten Sie 28 Fragen in 8 Kategorien. Erhalten Sie sofort eine detaillierte Auswertung mit Handlungsempfehlungen.</p>
       <div class="categories-list" id="categoriesList"></div>
-      <button class="btn-primary" onclick="startQuiz()" style="padding:0.75rem 2rem;font-size:1rem;">Jetzt starten</button>
+      <button class="btn-primary" onclick="startQuiz()" style="padding:0.75rem 2.5rem;font-size:1rem;">Jetzt starten</button>
     </div>
   </div>
 
   <!-- Question Screen -->
   <div id="question-screen">
     <div class="card">
-      <h2 id="categoryTitle"></h2>
-      <p id="categoryDesc"></p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2 id="categoryTitle" style="margin-bottom:0;"></h2>
+        <span id="questionCounter" style="font-size:0.8rem;color:var(--gray-400);font-weight:500;"></span>
+      </div>
+      <p id="categoryDesc" style="margin-bottom:1.5rem;"></p>
       <div id="questions"></div>
       <div class="nav-buttons">
         <button class="btn-secondary" id="prevBtn" onclick="prevQuestion()">Zurück</button>
-        <span id="questionCounter" style="font-size:0.85rem;color:var(--gray-500);align-self:center;"></span>
         <button class="btn-primary" id="nextBtn" onclick="nextQuestion()">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Capture Screen -->
+  <div id="email-screen">
+    <div class="card">
+      <div class="email-form">
+        <h3>Fast geschafft! 🎉</h3>
+        <p>Geben Sie Ihre E-Mail-Adresse ein, um Ihren persönlichen DSGVO-Bericht zu erhalten. Wir senden Ihnen den Bericht zu und informieren Sie über aktuelle Datenschutzthemen.</p>
+        <div class="email-input-group">
+          <input type="email" id="emailInput" placeholder="ihre@email.de" autocomplete="email">
+          <button class="btn-success" onclick="submitEmail()" style="padding:0.6rem 1.5rem;">Bericht anfordern</button>
+        </div>
+        <div id="emailError" style="color:var(--red);font-size:0.8rem;margin-top:0.5rem;display:none;"></div>
+        <div class="email-note">Der Bericht wird Ihnen umgehend per E-Mail zugesandt. Kein Spam, jederzeit abbestellbar.</div>
+        <div class="email-skip" onclick="skipEmail()">Weiter ohne E-Mail</div>
       </div>
     </div>
   </div>
@@ -119,14 +171,17 @@
     <div class="card">
       <h2 style="text-align:center;">Ihr DSGVO-Compliance Ergebnis</h2>
       <div class="score-circle" id="scoreCircle">0%</div>
-      <p id="scoreLabel" style="text-align:center;font-weight:600;font-size:1.1rem;"></p>
-      <p id="scoreDesc" style="text-align:center;color:var(--gray-500);font-size:0.9rem;margin-top:0.5rem;"></p>
+      <div class="score-summary">
+        <div class="score-label" id="scoreLabel"></div>
+        <div class="score-desc" id="scoreDesc"></div>
+      </div>
       <div class="category-scores" id="categoryScores"></div>
       <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--gray-200);">
-      <h3 style="margin-bottom:0.75rem;">Handlungsempfehlungen</h3>
+      <h3 style="margin-bottom:0.75rem;font-size:1.1rem;">Handlungsempfehlungen</h3>
       <ul class="recommendations" id="recommendations"></ul>
       <div class="report-actions">
-        <button class="btn-primary" onclick="downloadPDF()">PDF Bericht herunterladen</button>
+        <button class="btn-success" onclick="downloadPDF()">📄 PDF Bericht herunterladen</button>
+        <button class="btn-primary" onclick="shareResults()">🔗 Ergebnis teilen</button>
         <button class="btn-secondary" onclick="resetQuiz()">Neuen Check durchführen</button>
       </div>
     </div>
@@ -152,39 +207,31 @@ const categories = [
 ];
 
 const questions = [
-  // Datenverarbeitung
   { cat: 0, q: 'Haben Sie für jede Verarbeitungstätigkeit eine Rechtsgrundlage gemäß Art. 6 DSGVO dokumentiert?', opt: ['Nein, nicht dokumentiert', 'Teilweise dokumentiert', 'Ja, vollständig dokumentiert'] },
   { cat: 0, q: 'Werden die Zwecke der Datenverarbeitung vor Erhebung bestimmt und dokumentiert?', opt: ['Nein', 'Teilweise', 'Ja, immer'] },
   { cat: 0, q: 'Erheben Sie nur Daten, die für den Zweck erforderlich sind (Datenminimierung)?', opt: ['Nein, wir erheben mehr als nötig', 'Größtenteils', 'Ja, streng nach Datenminimierung'] },
   { cat: 0, q: 'Haben Sie eine Datenschutz-Folgenabschätzung (DPIA) für risikoreiche Verarbeitungen durchgeführt?', opt: ['Nie durchgeführt', 'Teilweise', 'Ja, für alle risikoreichen Verarbeitungen'] },
-  // Einwilligungsmanagement
   { cat: 1, q: 'Holen Sie aktive Einwilligungen vor der Verarbeitung personenbezogener Daten ein?', opt: ['Nein, keine Einwilligungen', 'Teilweise / nur wo rechtlich erforderlich', 'Ja, immer aktiv und dokumentiert'] },
   { cat: 1, q: 'Können Nutzer Einwilligungen genauso einfach widerrufen wie erteilen?', opt: ['Nein', 'Nicht gleich einfach', 'Ja, jederzeit und gleich einfach'] },
   { cat: 1, q: 'Dokumentieren Sie alle Einwilligungen nachweislich (Zeitstempel, Inhalt)?', opt: ['Nein, keine Dokumentation', 'Teilweise dokumentiert', 'Ja, vollständig nachweislich'] },
-  // Betroffenenrechte
   { cat: 2, q: 'Haben Sie einen Prozess zur Bearbeitung von Auskunftsanfragen (Art. 15 DSGVO)?', opt: ['Nein', 'Informell vorhanden', 'Ja, formaler Prozess'] },
   { cat: 2, q: 'Können Sie Daten auf Anfrage innerhalb der 30-Tage-Frist vollständig löschen?', opt: ['Nein', 'Teilweise möglich', 'Ja, innerhalb der Frist'] },
   { cat: 2, q: 'Ermöglichen Sie die Datenübertragbarkeit (Art. 20 DSGVO) in einem maschinenlesbaren Format?', opt: ['Nein', 'Auf Anfrage manuell', 'Ja, automatisiert'] },
   { cat: 2, q: 'Haben Sie ein Verfahren zur Berichtigung unrichtiger Daten etabliert?', opt: ['Nein', 'Informell', 'Ja, formaler Prozess'] },
-  // Datensicherheit
   { cat: 3, q: 'Verschlüsseln Sie personenbezogene Daten bei der Übertragung (TLS/SSL)?', opt: ['Nein', 'Teilweise', 'Ja, durchgehend'] },
   { cat: 3, q: 'Verschlüsseln Sie personenbezogene Daten im Ruhezustand (Festplatten-/Datenbankverschlüsselung)?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
   { cat: 3, q: 'Haben Sie ein Zugriffskontrollsystem (wer darf auf welche Daten zugreifen)?', opt: ['Nein', 'Teilweise / Ad-hoc', 'Ja, rollenbasiert (RBAC)'] },
   { cat: 3, q: 'Führen Sie regelmäßige Sicherheitsschulungen für Mitarbeiter durch?', opt: ['Nie', 'Einmalig / unregelmäßig', 'Ja, regelmäßig (mind. jährlich)'] },
   { cat: 3, q: 'Haben Sie ein Verfahren zur regelmäßigen Überprüfung der Sicherheitsmaßnahmen?', opt: ['Nein', 'Ad-hoc', 'Ja, regelmäßige Audits'] },
-  // Datenschutzverletzungen
   { cat: 4, q: 'Haben Sie einen Incident-Response-Plan für Datenschutzverletzungen?', opt: ['Nein', 'Informeller Plan', 'Ja, dokumentierter Prozess'] },
   { cat: 4, q: 'Können Sie eine Datenverletzung innerhalb von 72 Stunden an die Aufsichtsbehörde melden?', opt: ['Nein', 'Wahrscheinlich', 'Ja, Prozess etabliert'] },
   { cat: 4, q: 'Dokumentieren Sie alle Datenschutzverletzungen (auch nicht meldepflichtige)?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
-  // Datenschutzbeauftragter
   { cat: 5, q: 'Haben Sie einen Datenschutzbeauftragten bestellt (falls erforderlich)?', opt: ['Nicht bestellt / nicht erforderlich', 'Extern bestellt', 'Intern bestellt und etabliert'] },
   { cat: 5, q: 'Ist der Datenschutzbeauftragte in alle Datenschutzfragen eingebunden?', opt: ['Nein', 'Teilweise', 'Ja, in alle Prozesse'] },
   { cat: 5, q: 'Wird der Datenschutzbeauftragte regelmäßig geschult und weitergebildet?', opt: ['Nein', 'Unregelmäßig', 'Ja, regelmäßig'] },
-  // Dokumentation
   { cat: 6, q: 'Führen Sie ein vollständiges Verzeichnis aller Verarbeitungstätigkeiten (Art. 30 DSGVO)?', opt: ['Nein', 'Unvollständig', 'Ja, vollständig und aktuell'] },
   { cat: 6, q: 'Haben Sie mit allen Auftragsverarbeitern eine schriftliche DPA (AV-Vertrag) abgeschlossen?', opt: ['Nein / nicht alle', 'Teilweise', 'Ja, mit allen'] },
   { cat: 6, q: 'Dokumentieren Sie die Weisungsgebundenheit Ihrer Auftragsverarbeiter?', opt: ['Nein', 'Teilweise', 'Ja, vollständig'] },
-  // Drittlandtransfer
   { cat: 7, q: 'Übermitteln Sie personenbezogene Daten in Drittländer (außerhalb EU/EWR)?', opt: ['Ja, ohne geeignete Garantien', 'Ja, mit Standardvertragsklauseln (SCC)', 'Nein / Ja, mit Angemessenheitsbeschluss'] },
   { cat: 7, q: 'Haben Sie die Übermittlungen in Drittländer dokumentiert und die Garantien geprüft?', opt: ['Nicht dokumentiert', 'Teilweise dokumentiert', 'Ja, vollständig dokumentiert und geprüft'] },
   { cat: 7, q: 'Informieren Sie betroffene Personen über beabsichtigte Drittlandtransfers?', opt: ['Nein', 'Teilweise', 'Ja, transparent'] }
@@ -192,10 +239,13 @@ const questions = [
 
 let currentQuestion = 0;
 let answers = {};
+let userEmail = '';
+let savedResults = null;
 
 function init() {
   renderCategories();
   checkStartScreen();
+  loadFromStorage();
 }
 
 function renderCategories() {
@@ -212,11 +262,33 @@ function checkStartScreen() {
   }
 }
 
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem('dsgvocheck_answers');
+    if (saved) {
+      const data = JSON.parse(saved);
+      answers = data.answers || {};
+      currentQuestion = data.currentQuestion || 0;
+      userEmail = data.email || '';
+    }
+  } catch (e) {}
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem('dsgvocheck_answers', JSON.stringify({
+      answers, currentQuestion, email: userEmail
+    }));
+  } catch (e) {}
+}
+
 function startQuiz() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('question-screen').style.display = 'block';
   currentQuestion = 0;
   answers = {};
+  userEmail = '';
+  localStorage.removeItem('dsgvocheck_answers');
   renderQuestion(0);
 }
 
@@ -251,8 +323,8 @@ function renderQuestion(idx) {
   document.getElementById('prevBtn').disabled = idx === 0;
   const nextBtn = document.getElementById('nextBtn');
   const isLast = idx === questions.length - 1;
-  nextBtn.textContent = isLast ? 'Ergebnis anzeigen' : 'Weiter';
-  nextBtn.className = answers[idx] !== undefined ? (isLast ? 'btn-success' : 'btn-primary') : 'btn-primary';
+  nextBtn.textContent = isLast ? 'Auswerten' : 'Weiter';
+  nextBtn.className = (answers[idx] !== undefined) ? (isLast ? 'btn-success' : 'btn-primary') : 'btn-primary';
   nextBtn.disabled = answers[idx] === undefined;
 
   updateProgress();
@@ -268,11 +340,13 @@ function selectOption(idx, optIdx) {
   nextBtn.disabled = false;
   const isLast = idx === questions.length - 1;
   if (isLast) nextBtn.className = 'btn-success';
+  saveToStorage();
 }
 
 function nextQuestion() {
   if (currentQuestion === questions.length - 1) {
-    showResults();
+    saveToStorage();
+    showEmailCapture();
     return;
   }
   currentQuestion++;
@@ -291,26 +365,64 @@ function updateProgress() {
   document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
 }
 
-function showResults() {
+function showEmailCapture() {
   document.getElementById('question-screen').style.display = 'none';
+  document.getElementById('email-screen').style.display = 'block';
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function submitEmail() {
+  const input = document.getElementById('emailInput');
+  const error = document.getElementById('emailError');
+  const email = input.value.trim();
+
+  if (!email) {
+    error.textContent = 'Bitte geben Sie Ihre E-Mail-Adresse ein.';
+    error.style.display = 'block';
+    input.classList.add('error');
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    error.textContent = 'Bitte geben Sie eine gültige E-Mail-Adresse ein.';
+    error.style.display = 'block';
+    input.classList.add('error');
+    return;
+  }
+
+  error.style.display = 'none';
+  input.classList.remove('error');
+  userEmail = email;
+  saveToStorage();
+  showResults();
+}
+
+function skipEmail() {
+  userEmail = '';
+  showResults();
+}
+
+function showResults() {
+  document.getElementById('email-screen').style.display = 'none';
   document.getElementById('result').style.display = 'block';
 
   const catScores = categories.map((cat, ci) => {
     const catQs = questions.filter(q => q.cat === ci);
-    const catAnswers = catQs.map((q, qi) => {
-      const globalIdx = questions.indexOf(q);
-      return answers[globalIdx] !== undefined ? answers[globalIdx] : 0;
-    });
+    const catAnswers = catQs.map(q => answers[questions.indexOf(q)] !== undefined ? answers[questions.indexOf(q)] : 0);
     const max = catQs.length * 2;
     const got = catAnswers.reduce((s, a) => s + a, 0);
     const pct = max > 0 ? Math.round((got / max) * 100) : 0;
-    const missing = catQs.filter((q, qi) => answers[questions.indexOf(q)] === undefined);
-    return { id: cat.id, title: cat.title, pct, got, max, missing: missing.length };
+    return { id: cat.id, title: cat.title, pct, got, max };
   });
 
   const totalMax = questions.length * 2;
   const totalGot = Object.values(answers).reduce((s, a) => s + a, 0);
   const totalPct = Math.round((totalGot / totalMax) * 100);
+
+  savedResults = { totalPct, totalGot, totalMax, catScores, date: new Date().toISOString() };
 
   const circle = document.getElementById('scoreCircle');
   circle.textContent = totalPct + '%';
@@ -329,8 +441,13 @@ function showResults() {
   const container = document.getElementById('categoryScores');
   container.innerHTML = catScores.map(cs => {
     const barColor = cs.pct >= 70 ? 'var(--green)' : cs.pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    const tag = cs.pct >= 70 ? 'tag-green' : cs.pct >= 40 ? 'tag-yellow' : 'tag-red';
+    const tagText = cs.pct >= 70 ? 'Gut' : cs.pct >= 40 ? 'Mäßig' : 'Kritisch';
     return `<div class="category-score">
-      <h4>${cs.title}</h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+        <h4>${cs.title}</h4>
+        <span class="tag ${tag}">${tagText}</span>
+      </div>
       <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
         <span>${cs.got}/${cs.max} Punkte</span>
         <span><strong>${cs.pct}%</strong></span>
@@ -350,6 +467,8 @@ function showResults() {
     const cls = r.pct >= 60 ? 'ok' : r.pct >= 30 ? 'low' : '';
     return `<li class="${cls}"><strong>${r.cat}:</strong> ${r.text}</li>`;
   }).join('');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function getRecommendation(catId, pct) {
@@ -382,58 +501,149 @@ function getRecommendation(catId, pct) {
   return recs[catId] || 'Überprüfen und optimieren Sie Ihre Maßnahmen in diesem Bereich.';
 }
 
-function downloadPDF() {
-  const total = Object.keys(answers).length;
+function computeResults() {
+  const catScores = categories.map((cat, ci) => {
+    const catQs = questions.filter(q => q.cat === ci);
+    const catAnswers = catQs.map(q => answers[questions.indexOf(q)] !== undefined ? answers[questions.indexOf(q)] : 0);
+    const max = catQs.length * 2;
+    const got = catAnswers.reduce((s, a) => s + a, 0);
+    const pct = max > 0 ? Math.round((got / max) * 100) : 0;
+    return { id: cat.id, title: cat.title, pct, got, max };
+  });
   const totalMax = questions.length * 2;
   const totalGot = Object.values(answers).reduce((s, a) => s + a, 0);
-  const pct = Math.round((totalGot / totalMax) * 100);
+  const totalPct = Math.round((totalGot / totalMax) * 100);
+  return { catScores, totalPct, totalGot, totalMax };
+}
 
-  const content = [
-    'DSGVO-COMPLIANCE CHECK – ERGEBNISBERICHT',
-    '============================================',
-    `Datum: ${new Date().toLocaleDateString('de-DE')}`,
-    '',
-    `Gesamtergebnis: ${pct}%`,
-    `Beantwortete Fragen: ${total} / ${questions.length}`,
-    '',
-    '--- KATEGORIEN ---',
-    ...categories.map((cat, ci) => {
-      const catQs = questions.filter(q => q.cat === ci);
-      const catAns = catQs.map(q => answers[questions.indexOf(q)] || 0);
-      const max = catQs.length * 2;
-      const got = catAns.reduce((s, a) => s + a, 0);
-      return `  ${cat.title}: ${got}/${max} (${Math.round((got/max)*100)}%)`;
-    }),
-    '',
-    '--- HANDLUNGSEMPFEHLUNGEN ---',
-    ...categories.map((cat, ci) => {
-      const catQs = questions.filter(q => q.cat === ci);
-      const catAns = catQs.map(q => answers[questions.indexOf(q)] || 0);
-      const max = catQs.length * 2;
-      const got = catAns.reduce((s, a) => s + a, 0);
-      const p = Math.round((got/max)*100);
-      return `  ${cat.title} (${p}%): ${getRecommendation(cat.id, p)}`;
-    }),
-    '',
-    '--- RECHTLICHER HINWEIS ---',
-    'Dieser Bericht dient ausschließlich zu Informationszwecken und stellt keine Rechtsberatung dar. Für eine verbindliche Bewertung konsultieren Sie bitte einen Datenschutzbeauftragten oder Rechtsanwalt.'
-  ].join('\n');
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const { catScores, totalPct, totalGot, totalMax } = computeResults();
 
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `dsgvo-check-${new Date().toISOString().slice(0,10)}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const contentW = pageW - 2 * margin;
+  let y = margin;
+
+  function addSection(title, color) {
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.rect(margin, y, contentW, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text(title, margin + 2, y + 6);
+    y += 12;
+    doc.setTextColor(0, 0, 0);
+  }
+
+  function addLine(text, indent) {
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(text, contentW - (indent || 0));
+    if (y + lines.length * 5 > doc.internal.pageSize.getHeight() - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(lines, margin + (indent || 0), y);
+    y += lines.length * 5 + 1;
+  }
+
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(30, 58, 95);
+  doc.text('DSGVO-Compliance Check', margin, y);
+  y += 10;
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Erstellt: ${new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, y);
+  if (userEmail) {
+    y += 5;
+    doc.text(`E-Mail: ${userEmail}`, margin, y);
+  }
+  y += 10;
+
+  doc.setDrawColor(37, 99, 235);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  addSection('Gesamtergebnis', [37, 99, 235]);
+  addLine(`Gesamtpunktzahl: ${totalGot} / ${totalMax} (${totalPct}%)`, 0);
+  let label = totalPct >= 80 ? 'Hervorragend' : totalPct >= 60 ? 'Gut' : totalPct >= 40 ? 'Mäßig' : 'Kritisch';
+  addLine(`Bewertung: ${label}`, 0);
+  y += 5;
+
+  addSection('Kategorien im Detail', [30, 58, 95]);
+  catScores.forEach(cs => {
+    const barColor = cs.pct >= 70 ? [34, 197, 94] : cs.pct >= 40 ? [234, 179, 8] : [239, 68, 68];
+    doc.setFillColor(barColor[0], barColor[1], barColor[2]);
+    doc.rect(margin, y, contentW * (cs.pct / 100), 5, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(margin, y, contentW, 5, 'S');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${cs.title} (${cs.got}/${cs.max} = ${cs.pct}%)`, margin + 2, y + 4);
+    y += 8;
+  });
+  y += 5;
+
+  addSection('Handlungsempfehlungen', [30, 58, 95]);
+  catScores.forEach(cs => {
+    if (cs.pct < 100) {
+      const rec = getRecommendation(cs.id, cs.pct);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(50, 50, 50);
+      const title = `${cs.title} (${cs.pct}%):`;
+      doc.text(title, margin, y);
+      y += 5;
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(80, 80, 80);
+      addLine(rec, 5);
+      y += 2;
+    }
+  });
+
+  if (y > doc.internal.pageSize.getHeight() - margin - 20) {
+    doc.addPage();
+    y = margin;
+  }
+  y = doc.internal.pageSize.getHeight() - margin - 10;
+  doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  doc.setFont(undefined, 'italic');
+  doc.text('Dieser Bericht dient ausschließlich zu Informationszwecken und stellt keine Rechtsberatung dar.', margin, y);
+
+  doc.save(`dsgvo-check-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function shareResults() {
+  const { totalPct } = computeResults();
+  const text = `🧾 Mein Unternehmen erreicht ${totalPct}% im DSGVO-Compliance Check. Prüfen Sie auch Ihren Datenschutz-Status: https://creativecodingsolutions.github.io/dsgvocheck/`;
+  if (navigator.share) {
+    navigator.share({ title: 'DSGVO-Compliance Check', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Ergebnis wurde in die Zwischenablage kopiert!');
+    }).catch(() => {
+      prompt('Teilen Sie Ihr Ergebnis:', text);
+    });
+  }
 }
 
 function resetQuiz() {
   currentQuestion = 0;
   answers = {};
+  userEmail = '';
+  savedResults = null;
+  localStorage.removeItem('dsgvocheck_answers');
   document.getElementById('result').style.display = 'none';
   document.getElementById('start-screen').style.display = 'block';
   document.getElementById('progressFill').style.width = '0%';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 init();
